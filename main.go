@@ -40,8 +40,8 @@ var (
 )
 
 func main() {
-	flag.StringVar(&targetString, "t", "", "Target IP address, comma separated list of IP or CIDR notation, e.g. 192.168.1.0/24,10.0.0.0/24")
-	flag.StringVar(&portsString, "p", "", "port or port range, e.g. 80,443,8080-8090")
+	flag.StringVar(&targetString, "t", "192.168.0.0/24", "Target IP address, comma separated list of IP or CIDR notation, e.g. 192.168.1.0/24,10.0.0.0/24")
+	flag.StringVar(&portsString, "p", "80,443", "port or port range, e.g. 80,443,8080-8090")
 	flag.IntVar(&sourcePort, "s", 50001, "source port")
 	flag.IntVar(&rate, "rate", 100000, "rate limit in packets per second, default is 100k packets per second")
 	flag.DurationVar(&wait, "w", time.Second*1, "wait for finish")
@@ -181,6 +181,8 @@ func openRawConn() (conn *ipv4.PacketConn, err error) {
 func logf(format string, a ...interface{}) {
 	if !silence {
 		printMu.Lock()
+		// clear line
+		_, _ = fmt.Fprintf(os.Stderr, "\033[2K\r")
 		_, _ = fmt.Fprintf(os.Stderr, "[*] "+format, a...)
 		printMu.Unlock()
 	}

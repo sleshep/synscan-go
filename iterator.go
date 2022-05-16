@@ -114,6 +114,7 @@ func (i *AddressIteratorImpl) parseExpresion(ctx context.Context, addrExpression
 		parts := strings.Split(e, "-")
 		start, err = strconv.Atoi(parts[0])
 		if err != nil {
+			err = fmt.Errorf("invalid port range: %s", e)
 			return
 		}
 		if len(parts) == 1 {
@@ -130,7 +131,6 @@ func (i *AddressIteratorImpl) parseExpresion(ctx context.Context, addrExpression
 			end:   end,
 		})
 	}
-	fmt.Printf("parse done, %d ip, %d port\n", len(i.IPIters), len(i.PortRange))
 	return
 }
 
