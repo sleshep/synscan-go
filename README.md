@@ -1,8 +1,12 @@
 # synscan-go SYN Port scanner written in Go
 
-synscan-go is a simple SYN port scanner written in Pure Go. with no libpcap required.
+`synscan-go` is a simple SYN port scanner written in Pure Go. with no libpcap required.
 
-It only support linux system.
+Only support linux system.
+
+# Features
+* Blazing fast scan speed. only 5s for /24 ip range.
+* Written in pure Go. no c libs required.
 
 ## Installation
 
