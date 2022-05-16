@@ -27,6 +27,8 @@ var (
 	silence      bool
 	outFile      string
 
+	attack bool
+
 	// global variables
 	printMu *sync.Mutex
 	out     *os.File
@@ -40,13 +42,14 @@ var (
 )
 
 func main() {
-	flag.StringVar(&targetString, "t", "192.168.0.0/24", "Target IP address, comma separated list of IP or CIDR notation, e.g. 192.168.1.0/24,10.0.0.0/24")
-	flag.StringVar(&portsString, "p", "80,443", "port or port range, e.g. 80,443,8080-8090")
-	flag.IntVar(&sourcePort, "s", 50001, "source port")
-	flag.IntVar(&rate, "rate", 100000, "rate limit in packets per second, default is 100k packets per second")
+	flag.StringVar(&targetString, "t", "192.168.0.0/24", "Target IP address, comma separated list of IP or CIDR notation, e.g. 192.168.1.0/24,10.0.0.0/24, default is 192.168.0.0/24")
+	flag.StringVar(&portsString, "p", "80,443", "port or port range, e.g. 80,443,8080-8090, default 80,443")
+	flag.IntVar(&sourcePort, "c", 50001, "source port, default 50001")
+	flag.IntVar(&rate, "r", 100000, "rate limit, in packets per second, default is 100k packets per second")
 	flag.DurationVar(&wait, "w", time.Second*1, "wait for finish")
 	flag.StringVar(&outFile, "o", "-", "result output file, default is stdout")
-	flag.BoolVar(&silence, "silence", false, "silence, no info output")
+	flag.BoolVar(&silence, "s", false, "silence, no info output, default is false")
+	flag.BoolVar(&attack, "a", false, "attack mode, keep sending to target, default is false")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "  %s [options]\n", os.Args[0])
@@ -153,8 +156,13 @@ func scan() (err error) {
 					return
 				}
 				logf("sending %s\r", addr)
-				if err := sender.Send(addr.IP.String(), addr.Port); err != nil {
-					return err
+				for {
+					if err := sender.Send(addr.IP.String(), addr.Port); err != nil {
+						return err
+					}
+					if !attack {
+						break
+					}
 				}
 			}
 		}
