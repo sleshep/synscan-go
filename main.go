@@ -155,7 +155,7 @@ func scan() (err error) {
 				if !ok {
 					return
 				}
-				logf("sending %s\r", addr)
+				logfSampling("sending %s\r", addr)
 				for {
 					if err := sender.Send(addr.IP.String(), addr.Port); err != nil {
 						return err
@@ -194,6 +194,44 @@ func logf(format string, a ...interface{}) {
 		_, _ = fmt.Fprintf(os.Stderr, "[*] "+format, a...)
 		printMu.Unlock()
 	}
+}
+
+var (
+	logOnce = &sync.Once{}
+	logChan = make(chan string, 100)
+)
+
+// log every 100 or 100ms
+func logfSampling(format string, a ...interface{}) {
+	logOnce.Do(func() {
+		throttling := 200 * time.Millisecond
+		go func() {
+			n := 0
+			t := time.NewTimer(throttling)
+			defer t.Stop()
+			last := ""
+			for {
+				select {
+				case <-t.C:
+					if last != "" {
+						logf(last)
+						last = ""
+						t.Reset(throttling)
+					}
+				case s := <-logChan:
+					last = s
+					n++
+					if n >= 100 {
+						logf(last)
+						n = 0
+						t.Reset(throttling)
+						last = ""
+					}
+				}
+			}
+		}()
+	})
+	logChan <- fmt.Sprintf(format, a...)
 }
 
 func writeResult(s string) {
