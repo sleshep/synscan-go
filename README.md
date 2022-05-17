@@ -1,5 +1,11 @@
 # synscan-go SYN Port scanner written in Go
 
+<!-- badges -->
+[![Build Status](https://travis-ci.org/synscan/synscan-go.svg?branch=master)](https://travis-ci.org/synscan/synscan-go)
+[![Coverage Status](https://coveralls.io/repos/synscan/synscan-go/badge.png?branch=master)](https://coveralls.io/r/synscan/synscan-go)
+[![Go Version](https://img.shields.io/badge/go-1.18-brightgreen.svg)](https://golang.org/doc/install)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](
+
 `synscan-go` is a simple SYN port scanner written in Pure Go. with no libpcap required.
 
 Only support linux system.
