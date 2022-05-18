@@ -101,7 +101,12 @@ func scan() (err error) {
 	if err != nil {
 		return
 	}
-	sender, err := NewSYNSender(outboundIP.String(), sourcePort, gwMac, iface.HardwareAddr)
+	srcIP := outboundIP.String()
+	if attack {
+		// use random address
+		srcIP = ""
+	}
+	sender, err := NewSYNSender(srcIP, sourcePort, gwMac, iface.HardwareAddr)
 	if err != nil {
 		return
 	}
@@ -155,7 +160,9 @@ func scan() (err error) {
 				if !ok {
 					return
 				}
-				logfSampling("sending %s\r", addr)
+				if !attack {
+					logfSampling("sending %s\r", addr)
+				}
 				for {
 					if err := sender.Send(addr.IP.String(), addr.Port); err != nil {
 						return err
@@ -163,6 +170,7 @@ func scan() (err error) {
 					if !attack {
 						break
 					}
+					<-ticker.C
 				}
 			}
 		}

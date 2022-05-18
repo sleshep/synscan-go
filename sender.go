@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"net"
 	"syscall"
 
@@ -63,8 +64,23 @@ func NewSYNSender(srcIP string, srcPort int, gwMac net.HardwareAddr, srcMac net.
 	return
 }
 
+func randomIP4() net.IP {
+	return net.IPv4(
+		byte(rand.Intn(256)),
+		byte(rand.Intn(256)),
+		byte(rand.Intn(256)),
+		byte(rand.Intn(256)),
+	)
+}
+
 // Send implements SYNSender
 func (s *SYNSenderImpl) Send(addr string, port int) (err error) {
+	// random ip
+	if s.srcIP == "" {
+		s.ip4.SrcIP = randomIP4().To4()
+		s.tcp.SrcPort = layers.TCPPort(rand.Intn(65535))
+	}
+
 	s.tcp.DstPort = layers.TCPPort(port)
 	s.ip4.DstIP = net.ParseIP(addr)
 	err = s.tcp.SetNetworkLayerForChecksum(&s.ip4)
