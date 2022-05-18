@@ -106,7 +106,7 @@ func scan() (err error) {
 		// use random address
 		srcIP = ""
 	}
-	sender, err := NewSYNSender(srcIP, sourcePort, gwMac, iface.HardwareAddr)
+	sender, err := NewSYNSenderPCap(srcIP, sourcePort, gwMac, iface)
 	if err != nil {
 		return
 	}

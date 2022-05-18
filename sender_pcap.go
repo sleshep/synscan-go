@@ -4,44 +4,47 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
-	"syscall"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcap"
 )
 
-type SYNSender interface {
-	Send(addr string, port int) (err error)
-}
-
-type SYNSenderImpl struct {
-	rawPacketConn net.PacketConn
-
+type SYNSenderPCap struct {
 	srcPort int
 	srcIP   string
 	gwMac   net.HardwareAddr
 	srcMac  net.HardwareAddr
 
-	eth layers.Ethernet
-	ip4 layers.IPv4
-	tcp layers.TCP
+	eth    layers.Ethernet
+	ip4    layers.IPv4
+	tcp    layers.TCP
+	handle *pcap.Handle
 }
 
-var _ SYNSender = (*SYNSenderImpl)(nil)
+var _ SYNSender = (*SYNSenderPCap)(nil)
 
-func NewSYNSender(srcIP string, srcPort int, gwMac net.HardwareAddr, iface *net.Interface) (sender SYNSender, err error) {
-	s := &SYNSenderImpl{
+func getPCapHandle(iface *net.Interface) (handle *pcap.Handle, err error) {
+	handle, err = pcap.OpenLive(iface.Name, 65535, true, pcap.BlockForever)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func NewSYNSenderPCap(srcIP string, srcPort int, gwMac net.HardwareAddr, iface *net.Interface) (sender SYNSender, err error) {
+	s := &SYNSenderPCap{
 		srcIP:   srcIP,
 		srcPort: srcPort,
 		gwMac:   gwMac,
 		srcMac:  iface.HardwareAddr,
+		handle:  nil,
 	}
-
-	rawPacketConn, err := net.ListenPacket("ip4:tcp", "0.0.0.0")
+	s.handle, err = getPCapHandle(iface)
 	if err != nil {
 		return
 	}
-	s.rawPacketConn = rawPacketConn
+
 	sender = s
 	s.eth = layers.Ethernet{
 		SrcMAC:       s.srcMac,
@@ -64,17 +67,8 @@ func NewSYNSender(srcIP string, srcPort int, gwMac net.HardwareAddr, iface *net.
 	return
 }
 
-func randomIP4() net.IP {
-	return net.IPv4(
-		byte(rand.Intn(256)),
-		byte(rand.Intn(256)),
-		byte(rand.Intn(256)),
-		byte(rand.Intn(256)),
-	)
-}
-
 // Send implements SYNSender
-func (s *SYNSenderImpl) Send(addr string, port int) (err error) {
+func (s *SYNSenderPCap) Send(addr string, port int) (err error) {
 	// random ip
 	if s.srcIP == "" {
 		s.ip4.SrcIP = randomIP4().To4()
@@ -94,7 +88,7 @@ func (s *SYNSenderImpl) Send(addr string, port int) (err error) {
 	return
 }
 
-func (s *SYNSenderImpl) send(eth layers.Ethernet, ip layers.IPv4, tcp layers.TCP) (err error) {
+func (s *SYNSenderPCap) send(eth layers.Ethernet, ip layers.IPv4, tcp layers.TCP) (err error) {
 	// create packet
 	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{
@@ -102,26 +96,26 @@ func (s *SYNSenderImpl) send(eth layers.Ethernet, ip layers.IPv4, tcp layers.TCP
 		FixLengths:       true,
 	}
 	err = gopacket.SerializeLayers(buf, opts,
-		// &eth,
+		&eth,
 		&ip,
 		&tcp)
 	if err != nil {
 		return err
 	}
 	// send packet
-	// return handle.WritePacketData(buf.Bytes())
-	fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_RAW)
-	if err != nil {
-		return err
-	}
-	defer syscall.Close(fd)
-	bAddr, err := ip.DstIP.MarshalText()
-	if err != nil {
-		return err
-	}
-	err = syscall.Sendto(fd, buf.Bytes(), 0, &syscall.SockaddrInet4{
-		Port: 0,
-		Addr: [4]byte{bAddr[0], bAddr[1], bAddr[2], bAddr[3]},
-	})
+	return s.handle.WritePacketData(buf.Bytes())
+	// fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_RAW)
+	// if err != nil {
+	// 	return err
+	// }
+	// defer syscall.Close(fd)
+	// bAddr, err := ip.DstIP.MarshalText()
+	// if err != nil {
+	// 	return err
+	// }
+	// err = syscall.Sendto(fd, buf.Bytes(), 0, &syscall.SockaddrInet4{
+	// 	Port: 0,
+	// 	Addr: [4]byte{bAddr[0], bAddr[1], bAddr[2], bAddr[3]},
+	// })
 	return
 }
